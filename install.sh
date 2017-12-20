@@ -85,12 +85,18 @@ done
 tmpdir=$(mktemp -d)
 cd "$tmpdir"
 
-AWSCLI_GITHUB_VERSION=${AWSCLI_GITHUB_VERSION:-develop}
+echo "Installing Aws Cli"
+AWSCLI_GITHUB_VERSION=${AWSCLI_GITHUB_VERSION:-master}
 easy_install https://github.com/aws/aws-cli/archive/${AWSCLI_GITHUB_VERSION}.tar.gz
 
+echo "Downloading aws-ec2-ssh repo"
 EC2SSH_GITHUB_VERSION=${EC2SSH_GITHUB_VERSION:-master}
 curl -L https://github.com/widdix/aws-ec2-ssh/archive/${EC2SSH_GITHUB_VERSION}.tar.gz | tar -xzf -
+
+echo "Copying authorized_keys_command.sh in to place"
 cp "./aws-ec2-ssh-${EC2SSH_GITHUB_VERSION}/authorized_keys_command.sh" $AUTHORIZED_KEYS_COMMAND_FILE
+
+echo "Copying import_users.sh in to place"
 cp "./aws-ec2-ssh-${EC2SSH_GITHUB_VERSION}/import_users.sh" $IMPORT_USERS_SCRIPT_FILE
 
 if [ "${IAM_GROUPS}" != "" ]
@@ -123,6 +129,7 @@ then
     echo "USERADD_ARGS=\"${USERADD_ARGS}\"" >> $MAIN_CONFIG_FILE
 fi
 
+echo "Updating AuthorizedKeysCommand in $SSHD_CONFIG_FILE"
 if grep -q '#AuthorizedKeysCommand none' $SSHD_CONFIG_FILE; then
     sed -i "s:#AuthorizedKeysCommand none:AuthorizedKeysCommand ${AUTHORIZED_KEYS_COMMAND_FILE}:g" $SSHD_CONFIG_FILE
 else
@@ -131,6 +138,7 @@ else
     fi
 fi
 
+echo "Updating AuthorizedKeysCommandUser in $SSHD_CONFIG_FILE"
 if grep -q '#AuthorizedKeysCommandUser nobody' $SSHD_CONFIG_FILE; then
     sed -i "s:#AuthorizedKeysCommandUser nobody:AuthorizedKeysCommandUser nobody:g" $SSHD_CONFIG_FILE
 else
@@ -139,6 +147,7 @@ else
     fi
 fi
 
+echo "Adding import_users to cron"
 cat > /etc/cron.d/import_users << EOF
 SHELL=/bin/bash
 PATH=/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/opt/aws/bin
@@ -148,6 +157,7 @@ HOME=/
 EOF
 chmod 0644 /etc/cron.d/import_users
 
+echo "Executing $IMPORT_USERS_SCRIPT_FILE"
 $IMPORT_USERS_SCRIPT_FILE
 
 # In order to support SELinux in Enforcing mode, we need to tell SELinux that it
