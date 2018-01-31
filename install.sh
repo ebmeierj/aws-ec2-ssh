@@ -1,4 +1,5 @@
 #!/bin/bash -e
+set -x
 
 PATH=${PATH}:/usr/local/bin
 
